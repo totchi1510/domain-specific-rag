@@ -1,12 +1,45 @@
-# dev_stepsとspecification.mdはいらない
-dev_steps.md
-specification.md
-
-
-artifacts/
-
-
+﻿# Secrets
+.env
+.env.local
 .env.*
 
-.venv
+# Artifacts (keep .gitkeep)
+artifacts/*
+!artifacts/.gitkeep
+
+# Input data (keep .gitkeep)
+llm/*
+!llm/.gitkeep
+
+# Python caches
 __pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+
+# Builds
+build/
+dist/
+*.egg-info/
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node (future UI work)
+node_modules/
+
+# One-off dev scripts to ignore
+scripts/dump_pdf_text.py
