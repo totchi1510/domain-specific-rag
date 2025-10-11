@@ -99,9 +99,9 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
     if not q:
         raise HTTPException(status_code=400, detail="question is required")
 
-    threshold = float(_settings.get("threshold"))
-    top_k = int(_settings.get("top_k"))
-    form_url = _settings.get("google_form_url")
+    threshold = float(_settings.get("threshold", 0.75))
+    top_k = int(_settings.get("top_k", 3))
+    form_url = _settings.get("google_form_url", "https://example.com/google-form-placeholder")
 
     hits = _search_with_scores(q, k=top_k)
     if not hits:
@@ -116,9 +116,9 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
     context = "\n\n".join([c for c, _ in hits])[:4000]
 
     sys_msg = (
-        "あなたは日本語で簡潔に答えるアシスタントです。"
-        "与えられたコンテキストに基づいて、事実のみを短く回答してください。"
-        "不明確な場合は推測せず、フォーム誘導が適切な場合は誘導してください。"
+        "あなたは日本語で簡潔に答えるアシスタントです。\n"
+        "与えられたコンテキストに基づき、事実のみを短く回答してください。\n"
+        "不明確な場合は推測せず、必要に応じてフォーム誘導を提案してください。\n"
     )
     user_msg = (
         f"質問:\n{q}\n\n"
@@ -139,3 +139,15 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
 def healthz():
     ok = _vectordb is not None and _chat is not None
     return {"ok": ok}
+
+
+@app.get("/healthz_detail")
+def healthz_detail():
+    artifacts_dir = str(Path("artifacts").resolve())
+    return {
+        "vectordb": _vectordb is not None,
+        "chat": _chat is not None,
+        "artifacts_dir": artifacts_dir,
+        "faiss_exists": (Path("artifacts") / "index.faiss").exists(),
+    }
+
