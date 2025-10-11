@@ -99,9 +99,9 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
     if not q:
         raise HTTPException(status_code=400, detail="question is required")
 
-    threshold = float(_settings.get("threshold", 0.75))
-    top_k = int(_settings.get("top_k", 3))
-    form_url = _settings.get("google_form_url", "https://example.com/google-form-placeholder")
+    threshold = float(_settings.get("threshold"))
+    top_k = int(_settings.get("top_k"))
+    form_url = _settings.get("google_form_url")
 
     hits = _search_with_scores(q, k=top_k)
     if not hits:
@@ -121,7 +121,7 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
         "不明確な場合は推測せず、フォーム誘導が適切な場合は誘導してください。"
     )
     user_msg = (
-        f"質問:\n{q}\n\n" 
+        f"質問:\n{q}\n\n"
         f"コンテキスト:\n{context}\n"
     )
 
@@ -139,4 +139,3 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
 def healthz():
     ok = _vectordb is not None and _chat is not None
     return {"ok": ok}
-
