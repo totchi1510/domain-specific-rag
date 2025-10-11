@@ -109,7 +109,7 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
 
     threshold = float(_settings.get("threshold", 0.5))
     top_k = int(_settings.get("top_k", 5))
-    form_url = _settings.get("google_form_url", "https://example.com/google-form-placeholder")
+    form_url = _settings.get("google_form_url", "https://forms.gle/aY4kUJpJSdzh9Dxz7")
 
     # If index or embeddings/LLM not ready, guide to form
     if _vectordb is None or _embeddings is None or _chat is None:
@@ -214,4 +214,3 @@ if web_dir.exists():
         if index_path.exists():
             return FileResponse(index_path)
         raise HTTPException(status_code=404, detail="index.html not found")
-
