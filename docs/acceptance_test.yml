@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 # 受入テスト（iMS関連PDFに基づく初版）
+=======
+# 受入テスト（テンプレート）
+>>>>>>> 16607e031695e193eb65e19d80eb70bef420e895
 version: "1"
 defaults:
   citations_expected: false
 
 cases:
+<<<<<<< HEAD
   # iMSの定義・概要
   - name: ims_definition
     question: "iMSとは何ですか？"
@@ -11,10 +16,21 @@ cases:
       type: "answer"
       must_include:
         - "iMS"
+=======
+  # 例: 仕様に沿った正常回答
+  - name: 申請締切_確認
+    question: "申請の締切はいつですか？"
+    expected:
+      type: "answer"   # answer | fallback
+      must_include:
+        - "締切"
+        - "日"
+>>>>>>> 16607e031695e193eb65e19d80eb70bef420e895
       must_not_include:
         - "不明"
         - "推測"
 
+<<<<<<< HEAD
   # 設立・開始年（PDF記載の 2017 年）
   - name: ims_start_year
     question: "iMSはいつ開始されましたか？（設立年）"
@@ -60,10 +76,16 @@ cases:
   # ドメイン外の質問はフォールバック
   - name: out_of_scope_aws_pricing
     question: "AWSの料金体系について教えてください。"
+=======
+  # 例: 不明な場合はフォーム誘導
+  - name: 不明点_フォーム誘導
+    question: "サイトにない専門的な法律相談はできますか？"
+>>>>>>> 16607e031695e193eb65e19d80eb70bef420e895
     expected:
       type: "fallback"
       must_include:
         - "お問い合わせ"
+<<<<<<< HEAD
         - "http"
 
   - name: out_of_scope_deadline
@@ -90,3 +112,63 @@ cases:
       must_not_include:
         - "推測"
         - "不明"
+=======
+        - "Googleフォーム"
+
+  # 以下はTODO: ドメインに合わせて埋めてください
+  - name: TODO_01
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_02
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_03
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_04
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_05
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_06
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_07
+    question: ""
+    expected:
+      type: "fallback"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_08
+    question: ""
+    expected:
+      type: "fallback"
+      must_include: []
+      must_not_include: []
+>>>>>>> 16607e031695e193eb65e19d80eb70bef420e895

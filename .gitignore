@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿# Secrets
 .env
 .env.local
@@ -43,3 +44,17 @@ node_modules/
 
 # One-off dev scripts to ignore
 scripts/dump_pdf_text.py
+=======
+# dev_stepsとspecification.mdはいらない
+dev_steps.md
+specification.md
+
+
+artifacts/
+
+
+.env.*
+
+.venv
+__pycache__/
+>>>>>>> 16607e031695e193eb65e19d80eb70bef420e895
