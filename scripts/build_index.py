@@ -6,6 +6,11 @@ import yaml
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader
+try:
+    # 高品質抽出（日本語の文字化け低減）
+    from langchain_community.document_loaders import PyMuPDFLoader  # type: ignore
+except Exception:  # pragma: no cover
+    PyMuPDFLoader = None  # type: ignore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -21,8 +26,11 @@ def load_settings(settings_path: Path) -> dict:
 def collect_documents(input_dir: Path):
     docs = []
     for pdf in sorted(input_dir.glob("**/*.pdf")):
-        loader = PyPDFLoader(str(pdf))
         try:
+            if PyMuPDFLoader is not None:
+                loader = PyMuPDFLoader(str(pdf))
+            else:
+                loader = PyPDFLoader(str(pdf))
             docs.extend(loader.load())
         except Exception as e:
             print(f"Warning: failed to load {pdf}: {e}")
@@ -36,6 +44,7 @@ def main():
     parser.add_argument("--chunk_size", type=int, default=800, help="Chunk size in characters")
     parser.add_argument("--chunk_overlap", type=int, default=200, help="Chunk overlap in characters")
     parser.add_argument("--model", default="text-embedding-3-small", help="OpenAI embeddings model")
+    parser.add_argument("--peek", type=int, default=0, help="Print first N chunks for inspection")
     args = parser.parse_args()
 
     # Load environment from .env and .env.local (latter overrides)
@@ -62,6 +71,11 @@ def main():
     )
     splits = splitter.split_documents(documents)
     print(f"Loaded {len(documents)} pages -> {len(splits)} chunks")
+    if args.peek > 0:
+        print("--- Peek chunks ---")
+        for i, d in enumerate(splits[: args.peek]):
+            txt = (d.page_content or "").replace("\n", " ")
+            print(f"[{i+1}] {txt[:200]}")
 
     # Embeddings + FAISS
     if not os.getenv("OPENAI_API_KEY"):
@@ -76,4 +90,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
