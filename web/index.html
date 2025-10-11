@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Domain RAG Chat</title>
+    <link rel="stylesheet" href="/web/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>質問チャット（MVP）</h1>
+      <form id="ask-form">
+        <label for="question">質問</label>
+        <textarea id="question" rows="4" placeholder="ここに質問を入力..."></textarea>
+        <button id="send" type="submit">送信</button>
+        <span id="loading" class="hidden">送信中...</span>
+      </form>
+
+      <section id="result" class="result hidden">
+        <h2>回答</h2>
+        <div id="answer" class="answer"></div>
+        <div id="fallback" class="fallback hidden">
+          <p>必要に応じて、以下からお問い合わせください。</p>
+          <a id="formLink" class="btn" href="#" target="_blank" rel="noopener noreferrer">Googleフォームへ</a>
+        </div>
+      </section>
+    </main>
+
+    <script src="/web/app.js"></script>
+  </body>
+  </html>
+
