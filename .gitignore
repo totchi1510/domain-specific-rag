@@ -1,3 +1,9 @@
 # dev_stepsとspecification.mdはいらない
 dev_steps.md
 specification.md
+
+artifacts/
+
+.env
+.venv
+__pycache__/
