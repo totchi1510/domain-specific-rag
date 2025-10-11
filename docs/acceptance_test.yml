@@ -1,0 +1,83 @@
+# 受入テスト（テンプレート）
+version: "1"
+defaults:
+  citations_expected: false
+
+cases:
+  # 例: 仕様に沿った正常回答
+  - name: 申請締切_確認
+    question: "申請の締切はいつですか？"
+    expected:
+      type: "answer"   # answer | fallback
+      must_include:
+        - "締切"
+        - "日"
+      must_not_include:
+        - "不明"
+        - "推測"
+
+  # 例: 不明な場合はフォーム誘導
+  - name: 不明点_フォーム誘導
+    question: "サイトにない専門的な法律相談はできますか？"
+    expected:
+      type: "fallback"
+      must_include:
+        - "お問い合わせ"
+        - "Googleフォーム"
+
+  # 以下はTODO: ドメインに合わせて埋めてください
+  - name: TODO_01
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_02
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_03
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_04
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_05
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_06
+    question: ""
+    expected:
+      type: "answer"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_07
+    question: ""
+    expected:
+      type: "fallback"
+      must_include: []
+      must_not_include: []
+
+  - name: TODO_08
+    question: ""
+    expected:
+      type: "fallback"
+      must_include: []
+      must_not_include: []
