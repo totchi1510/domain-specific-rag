@@ -95,6 +95,16 @@ def main():
     )
     splits = splitter.split_documents(documents)
     print(f"Loaded {len(documents)} pages -> {len(splits)} chunks")
+    if not splits:
+        total_chars = sum(len((d.page_content or "")) for d in documents)
+        print(
+            "No text chunks produced. Details:"\
+            f" documents={len(documents)}, total_chars={total_chars}, "
+            f"chunk_size={args.chunk_size}, chunk_overlap={args.chunk_overlap}"
+        )
+        print("Check that /app/llm/data.md exists in the container and has content.\n"
+              "If running via Docker, ensure the llm/ folder is mounted.")
+        return
     if args.peek > 0:
         print("--- Peek chunks ---")
         for i, d in enumerate(splits[: args.peek]):
