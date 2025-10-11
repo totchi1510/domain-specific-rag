@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 
 class AskRequest(BaseModel):
@@ -179,8 +180,13 @@ def config_public():
 web_dir = Path("web")
 if web_dir.exists():
     app.mount("/web", StaticFiles(directory=str(web_dir), html=False), name="web")
-    # Serve index.html at root
-    app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="root")
+
+    @app.get("/")
+    def serve_index():
+        index_path = web_dir / "index.html"
+        if index_path.exists():
+            return FileResponse(index_path)
+        raise HTTPException(status_code=404, detail="index.html not found")
 
 
 @app.get("/healthz_detail")
