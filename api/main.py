@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from fastapi.staticfiles import StaticFiles
 
 
 class AskRequest(BaseModel):
@@ -163,6 +164,23 @@ def healthz_detail():
         "faiss_exists": (Path("artifacts") / "index.faiss").exists(),
         "env_has_key": os.getenv("OPENAI_API_KEY") is not None,
     }
+
+
+@app.get("/config_public")
+def config_public():
+    return {
+        "threshold": _settings.get("threshold", 0.75),
+        "top_k": _settings.get("top_k", 3),
+        "google_form_url": _settings.get("google_form_url", "https://example.com/google-form-placeholder"),
+    }
+
+
+# Serve static UI
+web_dir = Path("web")
+if web_dir.exists():
+    app.mount("/web", StaticFiles(directory=str(web_dir), html=False), name="web")
+    # Serve index.html at root
+    app.mount("/", StaticFiles(directory=str(web_dir), html=True), name="root")
 
 
 @app.get("/healthz_detail")
