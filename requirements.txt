@@ -5,3 +5,4 @@ faiss-cpu>=1.7.4
 PyYAML>=6.0.1
 pypdf>=4.0.0
 tiktoken>=0.7.0
+python-dotenv>=1.0.1
