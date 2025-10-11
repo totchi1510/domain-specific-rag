@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 from dotenv import load_dotenv
 
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
 try:
     # 高品質抽出（日本語の文字化け低減）
     from langchain_community.document_loaders import PyMuPDFLoader  # type: ignore
@@ -23,23 +23,47 @@ def load_settings(settings_path: Path) -> dict:
     return {}
 
 
-def collect_documents(input_dir: Path):
+def _load_pdf(path: Path):
+    if PyMuPDFLoader is not None:
+        return PyMuPDFLoader(str(path)).load()
+    return PyPDFLoader(str(path)).load()
+
+
+def collect_documents(input_path: Path):
+    """
+    Collect documents from a file or directory.
+    - If file: supports .md/.markdown/.txt/.pdf
+    - If directory: scans for .md/.markdown/.txt/.pdf recursively
+    """
     docs = []
-    for pdf in sorted(input_dir.glob("**/*.pdf")):
+    targets = []
+    if input_path.is_file():
+        targets = [input_path]
+    else:
+        # Prefer markdown/txt first, then pdfs
+        targets = (
+            sorted(input_path.glob("**/*.md"))
+            + sorted(input_path.glob("**/*.markdown"))
+            + sorted(input_path.glob("**/*.txt"))
+            + sorted(input_path.glob("**/*.pdf"))
+        )
+
+    for p in targets:
         try:
-            if PyMuPDFLoader is not None:
-                loader = PyMuPDFLoader(str(pdf))
-            else:
-                loader = PyPDFLoader(str(pdf))
-            docs.extend(loader.load())
+            suf = p.suffix.lower()
+            if suf in [".md", ".markdown", ".txt"]:
+                loader = TextLoader(str(p), encoding="utf-8")
+                docs.extend(loader.load())
+            elif suf == ".pdf":
+                docs.extend(_load_pdf(p))
         except Exception as e:
-            print(f"Warning: failed to load {pdf}: {e}")
+            print(f"Warning: failed to load {p}: {e}")
     return docs
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build FAISS index from PDFs in llm/ directory")
-    parser.add_argument("--input", default="llm", help="Directory containing PDF files")
+    parser = argparse.ArgumentParser(description="Build FAISS index from Markdown/PDF sources under llm/")
+    parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt/.pdf")
     parser.add_argument("--out", default="artifacts", help="Output directory for FAISS index")
     parser.add_argument("--chunk_size", type=int, default=800, help="Chunk size in characters")
     parser.add_argument("--chunk_overlap", type=int, default=200, help="Chunk overlap in characters")
@@ -60,7 +84,7 @@ def main():
     # Collect
     documents = collect_documents(input_dir)
     if not documents:
-        print(f"No PDFs found under {input_dir}. Place files and rerun.")
+        print(f"No source files found under {input_dir}. Place .md/.txt/.pdf and rerun.")
         return
 
     # Split
