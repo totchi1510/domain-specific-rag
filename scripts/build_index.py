@@ -22,7 +22,10 @@ def collect_documents(input_dir: Path):
     docs = []
     for pdf in sorted(input_dir.glob("**/*.pdf")):
         loader = PyPDFLoader(str(pdf))
-        docs.extend(loader.load())
+        try:
+            docs.extend(loader.load())
+        except Exception as e:
+            print(f"Warning: failed to load {pdf}: {e}")
     return docs
 
 
@@ -43,7 +46,7 @@ def main():
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    settings = load_settings(Path("config/settings.yml"))
+    _ = load_settings(Path("config/settings.yml"))
 
     # Collect
     documents = collect_documents(input_dir)
@@ -61,6 +64,8 @@ def main():
     print(f"Loaded {len(documents)} pages -> {len(splits)} chunks")
 
     # Embeddings + FAISS
+    if not os.getenv("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY is not set. Put it in .env.local or .env")
     embeddings = OpenAIEmbeddings(model=args.model)
     vectordb = FAISS.from_documents(splits, embeddings)
 
