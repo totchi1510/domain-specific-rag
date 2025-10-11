@@ -7,6 +7,6 @@ artifacts/
 
 
 .env.*
-./env.local
+
 .venv
 __pycache__/
