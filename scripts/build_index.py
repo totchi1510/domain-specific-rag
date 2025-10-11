@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -33,6 +34,10 @@ def main():
     parser.add_argument("--chunk_overlap", type=int, default=200, help="Chunk overlap in characters")
     parser.add_argument("--model", default="text-embedding-3-small", help="OpenAI embeddings model")
     args = parser.parse_args()
+
+    # Load environment from .env and .env.local (latter overrides)
+    load_dotenv(dotenv_path=Path('.env'))
+    load_dotenv(dotenv_path=Path('.env.local'), override=True)
 
     input_dir = Path(args.input)
     out_dir = Path(args.out)
