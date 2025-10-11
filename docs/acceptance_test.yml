@@ -1,83 +1,92 @@
-# 受入テスト（テンプレート）
+# 受入テスト（iMS関連PDFに基づく初版）
 version: "1"
 defaults:
   citations_expected: false
 
 cases:
-  # 例: 仕様に沿った正常回答
-  - name: 申請締切_確認
-    question: "申請の締切はいつですか？"
+  # iMSの定義・概要
+  - name: ims_definition
+    question: "iMSとは何ですか？"
     expected:
-      type: "answer"   # answer | fallback
+      type: "answer"
       must_include:
-        - "締切"
-        - "日"
+        - "iMS"
       must_not_include:
         - "不明"
         - "推測"
 
-  # 例: 不明な場合はフォーム誘導
-  - name: 不明点_フォーム誘導
-    question: "サイトにない専門的な法律相談はできますか？"
+  # 設立・開始年（PDF記載の 2017 年）
+  - name: ims_start_year
+    question: "iMSはいつ開始されましたか？（設立年）"
+    expected:
+      type: "answer"
+      must_include:
+        - "2017"
+
+  # 主要コンセプト1: Boundary Spanning
+  - name: ims_boundary_spanning
+    question: "Boundary Spanningとは何ですか？（iMSの文脈）"
+    expected:
+      type: "answer"
+      must_include:
+        - "Boundary Spanning"
+
+  # 主要コンセプト2: 自己決定理論 / Self-Determination Theory
+  - name: ims_sdt
+    question: "自己決定理論（Self-Determination Theory）はiMSでどう扱われていますか？"
+    expected:
+      type: "answer"
+      must_include:
+        - "Self-Determination"
+      must_not_include:
+        - "不明"
+
+  # iMSのシステム・枠組み（3つ）への言及
+  - name: ims_three_systems
+    question: "iMSの主要なシステムや枠組みはいくつありますか？"
+    expected:
+      type: "answer"
+      must_include:
+        - "3"
+
+  # メンバー規模（80名以上の記述に対応）
+  - name: ims_members_count
+    question: "iMSのメンバー規模はどの程度ですか？"
+    expected:
+      type: "answer"
+      must_include:
+        - "80"
+
+  # ドメイン外の質問はフォールバック
+  - name: out_of_scope_aws_pricing
+    question: "AWSの料金体系について教えてください。"
     expected:
       type: "fallback"
       must_include:
         - "お問い合わせ"
-        - "Googleフォーム"
+        - "http"
 
-  # 以下はTODO: ドメインに合わせて埋めてください
-  - name: TODO_01
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_02
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_03
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_04
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_05
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_06
-    question: ""
-    expected:
-      type: "answer"
-      must_include: []
-      must_not_include: []
-
-  - name: TODO_07
-    question: ""
+  - name: out_of_scope_deadline
+    question: "申請の締切はいつですか？（本サイトに未掲載の想定）"
     expected:
       type: "fallback"
-      must_include: []
-      must_not_include: []
+      must_include:
+        - "お問い合わせ"
+        - "http"
 
-  - name: TODO_08
-    question: ""
+  - name: out_of_scope_access
+    question: "アクセス方法（所在地や行き方）を教えてください。"
     expected:
       type: "fallback"
-      must_include: []
-      must_not_include: []
+      must_include:
+        - "お問い合わせ"
+        - "http"
+
+  # 用語の詳細が曖昧な場合は簡潔回答 or フォールバック
+  - name: ambiguous_term
+    question: "iMSの課題は何ですか？（曖昧な総称）"
+    expected:
+      type: "answer"
+      must_not_include:
+        - "推測"
+        - "不明"
