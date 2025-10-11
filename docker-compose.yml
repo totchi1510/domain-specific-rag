@@ -1,6 +1,4 @@
-version: "3.9"
-
-services:
+﻿services:
   indexer:
     build: .
     image: domain-rag:latest
@@ -11,7 +9,6 @@ services:
       - ./llm:/app/llm
       - ./artifacts:/app/artifacts
       - ./config:/app/config:ro
-    profiles: ["index"]
 
   api:
     build: .

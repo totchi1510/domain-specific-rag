@@ -1,123 +1,68 @@
-﻿# 仕様書（MVP） — 組織特化型LLM Webサイト
+# 仕様書（MVP）— ドメイン特化型 LLM Web サイト
+
 ## 1. 概要
-
-目的：公開してよい組織情報（PDF）に基づき、Web来訪者の日本語質問へ自動回答。
-
-前提：クラウド前提・無料枠重視／不明時は Googleフォーム へ誘導（出典表示はMVPでは行わない）。
+英語のMarkdown/TXTナレッジに基づき、Web 来訪者の日本語質問へ自動回答するRAGのMVP。Config B（JP→EN 翻訳→EN検索→JA回答）を採用し、英語コーパスでも日本語UXを維持します。
 
 ## 2. 対象・利用シナリオ
-
-対象：全世界のWebサイト来訪者（公開サイト）。
-
-典型質問：イベント要項、申請手順、締切、担当窓口、アクセスなど。
-
-不明時導線：Googleフォーム（例：<GoogleフォームURL>）へ案内。
+- 対象: 自サイトのFAQ/ガイドの自動応答（一般公開）
+- 典型質問: 概要、定義、年次、用語解説、規模、枠組み等
+- 不明時導線: 問い合わせフォーム（MVPは出典非表示）
 
 ## 3. 機能要件
 3.1 コア機能
-
-F1 質問受付：テキスト質問（日本語）を受理。
-
-F2 回答生成：PDFナレッジ（RAG）を参照して簡潔に回答。
-
-F3 不明時誘導：信頼度が閾値未満／該当なし → Googleフォーム案内。
-
-F4 API提供：POST /ask → {"question": string} を受け、{"answer": string, "fallback": boolean} を返す。
-
-F5 ナレッジ更新：PDF追加・更新→オフラインで再インデックス→再デプロイ。
+- F1 質問受付: 日本語テキストを受理
+- F2 回答生成: 英語コーパスを参照して日本語で簡潔回答
+- F3 不明時誘導: 閾値未満は問い合わせリンク提示（fallback: true）
+- F4 API提供: `POST /ask` → `{answer, fallback}`
+- F5 ナレッジ更新: Markdown更新→再インデックス→再起動
 
 3.2 UI（MVP）
-
-単一ページのチャットUI（入力・送信・回答表示・ローディング）。
-
-fallback: true の場合、Googleフォームボタンを強調表示。
-
-フッター：免責・プライバシーポリシー・お問い合わせ（同フォーム）。
+- 単一ページのチャットUI（入力・送信・回答表示・ローディング）
+- fallback: true の場合は問い合わせボタンを強調
 
 ## 4. 非機能要件
+- 実装: Python（FastAPI, LangChain）
+- ホスティング: Docker（API/静的配信）
+- コスト: OpenAIは最小トークン
+- 性能: p50 ≤ 3s, p95 ≤ 8s を目安
+- セキュリティ: 公開情報のみ取り扱い（個人情報の保存なし）
+- 多言語: MVPは日本語UI固定／英語コーパス
 
-実装言語：Python。
+## 5. アーキテクチャ
+`[Web UI] -- POST /ask --> [API(FastAPI)] -- Retriever(FAISS) -- LLM(OpenAI)`
 
-ホスティング：フロント：静的（Vercel等）／API：サーバレス or 軽量常時稼働（無料枠優先）。
-
-コスト：無料枠内運用（OpenAIは試用枠・最小トークン）。
-
-性能目標：p50 ≤ 3s、p95 ≤ 8s。
-
-可用性：無料枠SLAに準拠。
-
-セキュリティ：公開情報のみ取扱い（機密なし）。
-
-プライバシー：個人情報はフォーム側で収集（本システムは保存しない）。
-
-アクセシビリティ：基本的キーボード操作・コントラスト担保。
-
-多言語：MVPは日本語固定（将来拡張可）。
-
-## 5. アーキテクチャ概要
-[Web UI（静的）] -- POST /ask --> [API（Python/FastAPI）]
-                                   ├─ Retriever（FAISS 等）
-                                   ├─ Prompt組立（日本語・ガード）
-                                   ├─ LLM（OpenAI API）
-                                   └─ 回答 or Googleフォーム誘導
-[PDF群] --(オフライン: LangChainで分割/埋め込み/索引生成)--> [索引アーティファクト]
-
-
-オフライン処理（索引作成）：LangChain（PDF Loader／Text Splitter／OpenAI Embeddings／FAISS）。
-
-オンライン処理（推論）：軽量APIでRetriever→LLM。
+`[Markdown/TXT] --(オフライン: 分割/埋め込み/索引生成)--> [FAISS artifacts]`
 
 ## 6. LLM・RAGポリシー
-
-LLM：OpenAI（日本語回答・短文志向）。
-
-埋め込み：OpenAI Embeddings。
-
-チャンク：目安 800字／オーバーラップ 200字。
-
-Top-k：3〜5。
-
-閾値：類似度スコア暫定 0.75（未満で fallback: true）。
-
-出典：MVPは非表示。
-
-ガード：確信度低・法務/医療はフォーム誘導優先。
+- LLM: OpenAI（日本語で簡潔回答。英語固有名詞は括弧で併記）
+- Embeddings: OpenAI（多言語）
+- チャンク: 800/200（調整可）
+- Top-k: 3〜5、閾値: 0.30〜0.50 から評価
+- Config B:
+  - `translate_query: true`
+  - `doc_lang: en`
+  - `answer_lang: ja`
 
 ## 7. API I/F
+- `POST /ask`
+  - Req: `{ "question": "iMSとは？" }`
+  - Res(成功): `{ "answer": "...", "fallback": false }`
+  - Res(不明): `{ "answer": "該当情報が見つかりません...<URL>", "fallback": true }`
+- `GET /healthz` / `GET /healthz_detail`
 
-Endpoint：POST /ask
-
-Request：{ "question": "申請の締切は？" }
-
-Response（成功）：{ "answer": "締切は10月31日 23:59（JST）です。", "fallback": false }
-
-Response（不明）：{ "answer": "該当情報が見つかりません。こちらからお問い合わせください：<GoogleフォームURL>", "fallback": true }
-
-Error：4xx/5xx（入力不正・内部エラー等）。
-
-## 8. 運用・更新
-
-PDF整備 → 再インデックス（オフライン） → API再デプロイ。
-
-インデックス管理：サイズ小さめ（同梱運用）、タグ付け（例：kb-YYYYMMDD）。
-
-最低限の監視：リクエスト数・fallback率（将来強化）。
+## 8. 運用
+- ナレッジ: `llm/*.md` 配置
+- 再インデックス: `docker compose run --rm indexer`
+- 再起動: `docker compose restart api`
+- 監視: リクエスト数／fallback率
 
 ## 9. 受け入れ基準
+- 10問中8問以上が適切回答
+- 残りは確実にフォーム誘導
+- 応答性能は目標範囲内
 
-想定10問中8問以上が適切回答。
-
-残りは確実にフォーム誘導。
-
-応答性能：p50 ≤ 3s。
-
-回答は日本語で簡潔・推測なし。
-
-## 10. 制約・リスク
-
-無料枠超過 → レート制限・回答長制限・キャッシュで緩和。
-
-PDF抽出誤差 → テキスト抽出しやすい版の用意・整形。
-
-コールドスタート遅延 → 依存削減・軽量化（将来は常時稼働へ移行検討）。
+## 10. リスク
+- 無料枠・レート制限 → 回答長・レート制御
+- 抽出品質 → Markdownの語彙・構造を明確化
+- コールドスタート → 必要に応じ常時稼働等
 
