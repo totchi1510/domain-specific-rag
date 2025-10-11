@@ -169,9 +169,9 @@ def healthz_detail():
 @app.get("/config_public")
 def config_public():
     return {
-        "threshold": _settings.get("threshold", 0.75),
-        "top_k": _settings.get("top_k", 3),
-        "google_form_url": _settings.get("google_form_url", "https://example.com/google-form-placeholder"),
+        "threshold": _settings.get("threshold"),
+        "top_k": _settings.get("top_k"),
+        "google_form_url": _settings.get("google_form_url"),
     }
 
 
