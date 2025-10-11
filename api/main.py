@@ -6,12 +6,12 @@ from typing import List, Tuple
 import yaml
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from langchain_community.vectorstores import FAISS
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 
 class AskRequest(BaseModel):
@@ -36,15 +36,15 @@ def load_env():
     load_dotenv(dotenv_path=Path(".env.local"), override=True)
 
 
-app = FastAPI(title="Domain RAG API", version="0.2.0")
+app = FastAPI(title="Domain RAG API", version="0.3.0")
 
-_settings = {}
+_settings: dict = {}
 _embeddings: OpenAIEmbeddings | None = None
 _vectordb: FAISS | None = None
 _chat: ChatOpenAI | None = None
 
 # very simple in-memory rate limiter
-_rate_bucket = {}
+_rate_bucket: dict[str, List[float]] = {}
 _RATE_LIMIT = {"capacity": 10, "window_sec": 10}
 
 
@@ -107,8 +107,8 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
     if not q:
         raise HTTPException(status_code=400, detail="question is required")
 
-    threshold = float(_settings.get("threshold", 0.75))
-    top_k = int(_settings.get("top_k", 3))
+    threshold = float(_settings.get("threshold", 0.5))
+    top_k = int(_settings.get("top_k", 5))
     form_url = _settings.get("google_form_url", "https://example.com/google-form-placeholder")
 
     # If index or embeddings/LLM not ready, guide to form
@@ -116,7 +116,23 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
         msg = f"システム準備中のため、こちらからお問い合わせください: {form_url}"
         return AskResponse(answer=msg, fallback=True)
 
-    hits = _search_with_scores(q, k=top_k)
+    # Optional query translation (JA -> EN) before retrieval
+    translate_query = bool(_settings.get("translate_query", False))
+    doc_lang = str(_settings.get("doc_lang", "en")).lower()
+    answer_lang = str(_settings.get("answer_lang", "ja")).lower()
+
+    q_for_search = q
+    if translate_query:
+        try:
+            tr = _chat.invoke([
+                ("system", "Translate the user's question into English. Respond with the translation only."),
+                ("user", q),
+            ])
+            q_for_search = tr.content.strip() if hasattr(tr, "content") else str(tr)
+        except Exception:
+            q_for_search = q  # fallback to original
+
+    hits = _search_with_scores(q_for_search, k=top_k)
     if not hits:
         msg = f"該当情報が見つかりません。こちらからお問い合わせください: {form_url}"
         return AskResponse(answer=msg, fallback=True)
@@ -128,17 +144,25 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
 
     context = "\n\n".join([c for c, _ in hits])[:4000]
 
+    # Build prompts: answer in Japanese; include English terms in parentheses when useful
     sys_msg = (
         "あなたは日本語で簡潔に答えるアシスタントです。\n"
-        "与えられたコンテキストに基づき、事実のみを短く回答してください。\n"
+        "与えられたコンテキストに基づいて、事実のみを短く回答してください。\n"
+        "英語の固有名詞や理論名は、必要に応じて英語原語を括弧で併記してください。\n"
         "不明確な場合は推測せず、必要に応じてフォーム誘導を提案してください。\n"
     )
-    user_msg = (
-        f"質問:\n{q}\n\n"
-        f"コンテキスト:\n{context}\n"
-    )
+    if translate_query and q_for_search != q:
+        user_msg = (
+            f"質問(日本語):\n{q}\n\n"
+            f"質問(英語訳):\n{q_for_search}\n\n"
+            f"コンテキスト(英語想定):\n{context}\n"
+        )
+    else:
+        user_msg = (
+            f"質問:\n{q}\n\n"
+            f"コンテキスト:\n{context}\n"
+        )
 
-    assert _chat is not None
     result = _chat.invoke([
         ("system", sys_msg),
         ("user", user_msg),
@@ -173,6 +197,9 @@ def config_public():
         "threshold": _settings.get("threshold"),
         "top_k": _settings.get("top_k"),
         "google_form_url": _settings.get("google_form_url"),
+        "translate_query": _settings.get("translate_query", False),
+        "doc_lang": _settings.get("doc_lang", "en"),
+        "answer_lang": _settings.get("answer_lang", "ja"),
     }
 
 
@@ -188,13 +215,3 @@ if web_dir.exists():
             return FileResponse(index_path)
         raise HTTPException(status_code=404, detail="index.html not found")
 
-
-@app.get("/healthz_detail")
-def healthz_detail():
-    artifacts_dir = str(Path("artifacts").resolve())
-    return {
-        "vectordb": _vectordb is not None,
-        "chat": _chat is not None,
-        "artifacts_dir": artifacts_dir,
-        "faiss_exists": (Path("artifacts") / "index.faiss").exists(),
-    }

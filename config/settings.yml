@@ -1,4 +1,9 @@
-threshold: 0.30
-top_k: 3
+﻿threshold: 0.50
+top_k: 5
 # 仮のGoogleフォームURL。実URLが決まり次第、置き換えてください。
 google_form_url: "https://forms.gle/aY4kUJpJSdzh9Dxz7"
+
+# Query/Answer language strategy (Config B)
+translate_query: true        # translate user question JA -> EN before retrieval
+doc_lang: "en"               # documents are primarily English
+answer_lang: "ja"            # answer in Japanese
