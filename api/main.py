@@ -37,7 +37,7 @@ def load_env():
 app = FastAPI(title="Domain RAG API", version="0.2.0")
 
 _settings = {}
-_embeddings = None
+_embeddings: OpenAIEmbeddings | None = None
 _vectordb: FAISS | None = None
 _chat: ChatOpenAI | None = None
 
@@ -52,15 +52,21 @@ def _startup():
     load_env()
     _settings = load_settings()
 
-    model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
-    _chat = ChatOpenAI(model=model, temperature=0.2)
+    # Initialize LLM only if key is set; otherwise start in degraded mode
+    chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+    if os.getenv("OPENAI_API_KEY"):
+        _chat = ChatOpenAI(model=chat_model, temperature=0.2)
+        _embeddings = OpenAIEmbeddings(model=os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"))
+    else:
+        _chat = None
+        _embeddings = None
 
-    _embeddings = OpenAIEmbeddings(model=os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"))
-
+    # Load FAISS index if present and embeddings available
     artifacts_dir = Path("artifacts")
-    if not (artifacts_dir / "index.faiss").exists():
-        raise RuntimeError("FAISS index not found. Build it via scripts/build_index.py")
-    _vectordb = FAISS.load_local(str(artifacts_dir), _embeddings, allow_dangerous_deserialization=True)
+    if (artifacts_dir / "index.faiss").exists() and _embeddings is not None:
+        _vectordb = FAISS.load_local(str(artifacts_dir), _embeddings, allow_dangerous_deserialization=True)
+    else:
+        _vectordb = None
 
 
 def _rate_limit_ok(key: str) -> bool:
@@ -78,15 +84,15 @@ def _rate_limit_ok(key: str) -> bool:
 
 
 def _search_with_scores(query: str, k: int) -> List[Tuple[str, float]]:
-    assert _vectordb is not None
-    # Prefer relevance scores in [0,1] if available; fallback to distance -> pseudo-relevance
-    if hasattr(_vectordb, "similarity_search_with_relevance_scores"):
-        hits = _vectordb.similarity_search_with_relevance_scores(query, k=k)
-        return [(doc.page_content, float(score)) for doc, score in hits]
-    else:
+    if _vectordb is None:
+        return []
+    # Use distance-based scores and normalize to (0,1] for stability across backends
+    if hasattr(_vectordb, "similarity_search_with_score"):
         hits = _vectordb.similarity_search_with_score(query, k=k)
-        # score is a distance; normalize to (0,1]
         return [(doc.page_content, 1.0 / (1.0 + float(score))) for doc, score in hits]
+    # Fallback without scores
+    hits = _vectordb.similarity_search(query, k=k)
+    return [(doc.page_content, 1.0) for doc in hits]
 
 
 @app.post("/ask", response_model=AskResponse)
@@ -102,6 +108,11 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
     threshold = float(_settings.get("threshold", 0.75))
     top_k = int(_settings.get("top_k", 3))
     form_url = _settings.get("google_form_url", "https://example.com/google-form-placeholder")
+
+    # If index or embeddings/LLM not ready, guide to form
+    if _vectordb is None or _embeddings is None or _chat is None:
+        msg = f"システム準備中のため、こちらからお問い合わせください: {form_url}"
+        return AskResponse(answer=msg, fallback=True)
 
     hits = _search_with_scores(q, k=top_k)
     if not hits:
@@ -147,7 +158,19 @@ def healthz_detail():
     return {
         "vectordb": _vectordb is not None,
         "chat": _chat is not None,
+        "embeddings": _embeddings is not None,
+        "artifacts_dir": artifacts_dir,
+        "faiss_exists": (Path("artifacts") / "index.faiss").exists(),
+        "env_has_key": os.getenv("OPENAI_API_KEY") is not None,
+    }
+
+
+@app.get("/healthz_detail")
+def healthz_detail():
+    artifacts_dir = str(Path("artifacts").resolve())
+    return {
+        "vectordb": _vectordb is not None,
+        "chat": _chat is not None,
         "artifacts_dir": artifacts_dir,
         "faiss_exists": (Path("artifacts") / "index.faiss").exists(),
     }
-
