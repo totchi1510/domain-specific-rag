@@ -7,7 +7,7 @@ import yaml
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
-from langchain_community.document_loaders import PyMupdfLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -44,7 +44,7 @@ def collect_documents(input_path: Path) -> List:
                 loader = TextLoader(str(p), encoding="utf-8")
                 docs.extend(loader.load())
             elif p.suffix.lower() in {".pdf"}:
-                loader = PyMupdfLoader(str(p))
+                loader = PyMuPDFLoader(str(p))
                 docs.extend(loader.load())
             else:
                 print(f"Warning: unsupported file type {p}, skipping")
@@ -55,7 +55,7 @@ def collect_documents(input_path: Path) -> List:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build FAISS index from Markdown/TXT sources under llm/")
+    parser = argparse.ArgumentParser(description="Build FAISS index from Markdown, txt or pdf sources under llm/")
     parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt/.pdf")
     parser.add_argument("--out", default="artifacts", help="Output directory for FAISS index")
     parser.add_argument("--chunk_size", type=int, default=800, help="Chunk size in characters")
@@ -69,7 +69,13 @@ def main():
     load_dotenv(dotenv_path=Path(".env.local"), override=True)
 
     input_path = Path(args.input)
+
+    if not input_path.exists():
+        print(f"Error: input path {input_path} does not exist")
+        return
+
     out_dir = Path(args.out)
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     _ = load_settings(Path("config/settings.yml"))
@@ -77,7 +83,7 @@ def main():
     # Collect
     documents = collect_documents(input_path)
     if not documents:
-        print(f"No source files found under {input_path}. Place .md/.txt and rerun.")
+        print(f"No source files found under {input_path}. Place .md/.txt/.pdf and rerun.")
         return
 
     # Split
