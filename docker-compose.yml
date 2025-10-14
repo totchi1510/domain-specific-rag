@@ -2,7 +2,7 @@
   indexer:
     build: .
     image: domain-rag:latest
-    command: ["python", "scripts/build_index.py", "--input", "/app/llm", "--out", "/app/artifacts"]
+    entrypoint: ["python", "scripts/build_index.py"]
     env_file:
       - .env.local
     volumes:
