@@ -1,92 +1,202 @@
-﻿# 受入テスト（iMS関連PDFに基づく初版）
-version: "1"
+﻿version: "1"
 defaults:
   citations_expected: false
 
 cases:
-  # iMSの定義・概要
-  - name: ims_definition
-    question: "iMSとは何ですか？"
+  - name: ims_definition_ja
+    question: "iMSとは何ですか？ 概要を一段落で説明してください。"
     expected:
       type: "answer"
-      must_include:
-        - "iMS"
-      must_not_include:
-        - "不明"
-        - "推測"
+      must_include: ["iMS"]
 
-  # 設立・開始年（PDF記載の 2017 年）
-  - name: ims_start_year
-    question: "iMSはいつ開始されましたか？（設立年）"
+  - name: ims_definition_en
+    question: "What is iMS? Provide a concise overview."
     expected:
       type: "answer"
-      must_include:
-        - "2017"
+      must_include: ["iMS"]
 
-  # 主要コンセプト1: Boundary Spanning
-  - name: ims_boundary_spanning
-    question: "Boundary Spanningとは何ですか？（iMSの文脈）"
+  - name: ims_start_year_direct
+    question: "iMSはいつ開始されましたか？西暦で答えてください。"
     expected:
       type: "answer"
-      must_include:
-        - "Boundary Spanning"
+      must_include: ["2017"]
 
-  # 主要コンセプト2: 自己決定理論 / Self-Determination Theory
-  - name: ims_sdt
-    question: "自己決定理論（Self-Determination Theory）はiMSでどう扱われていますか？"
+  - name: ims_start_year_variation
+    question: "プロジェクトの開始年（iMS）を数字のみで教えてください。"
     expected:
       type: "answer"
-      must_include:
-        - "Self-Determination"
-      must_not_include:
-        - "不明"
+      must_include: ["2017"]
 
-  # iMSのシステム・枠組み（3つ）への言及
-  - name: ims_three_systems
-    question: "iMSの主要なシステムや枠組みはいくつありますか？"
+  - name: ims_boundary_spanning_definition
+    question: "Boundary Spanningとは何か、iMSの文脈で説明してください。"
     expected:
       type: "answer"
-      must_include:
-        - "3"
+      must_include: ["Boundary Spanning"]
 
-  # メンバー規模（80名以上の記述に対応）
+  - name: ims_boundary_spanning_purpose
+    question: "iMSにおけるBoundary Spanningの目的は？"
+    expected:
+      type: "answer"
+      must_include: ["Boundary Spanning"]
+
+  - name: ims_sdt_concept
+    question: "Self-Determination Theory（自己決定理論）はiMSでどのように扱われていますか？"
+    expected:
+      type: "answer"
+      must_include: ["Self-Determination"]
+
+  - name: ims_sdt_components
+    question: "Self-Determination Theoryの主要な構成要素（例: autonomy, competence, relatedness）について説明してください。"
+    expected:
+      type: "answer"
+      must_include: ["autonomy", "competence", "relatedness"]
+
+  - name: ims_three_systems_count
+    question: "iMSの主要なシステムはいくつありますか？数字で答えてください。"
+    expected:
+      type: "answer"
+      must_include: ["3"]
+
   - name: ims_members_count
-    question: "iMSのメンバー規模はどの程度ですか？"
+    question: "iMSのメンバー規模はどのくらいですか？"
     expected:
       type: "answer"
-      must_include:
-        - "80"
+      must_include: ["80"]
 
-  # ドメイン外の質問はフォールバック
-  - name: out_of_scope_aws_pricing
-    question: "AWSの料金体系について教えてください。"
-    expected:
-      type: "fallback"
-      must_include:
-        - "お問い合わせ"
-        - "http"
-
-  - name: out_of_scope_deadline
-    question: "申請の締切はいつですか？（本サイトに未掲載の想定）"
-    expected:
-      type: "fallback"
-      must_include:
-        - "お問い合わせ"
-        - "http"
-
-  - name: out_of_scope_access
-    question: "アクセス方法（所在地や行き方）を教えてください。"
-    expected:
-      type: "fallback"
-      must_include:
-        - "お問い合わせ"
-        - "http"
-
-  # 用語の詳細が曖昧な場合は簡潔回答 or フォールバック
-  - name: ambiguous_term
-    question: "iMSの課題は何ですか？（曖昧な総称）"
+  - name: ims_stakeholders
+    question: "iMSに関わる主なステークホルダー（例: 学生、メンター、教職員など）を列挙してください。"
     expected:
       type: "answer"
-      must_not_include:
-        - "推測"
-        - "不明"
+      must_include: ["メンター"]
+
+  - name: ims_roles
+    question: "iMSにおけるメンターの役割を一言で説明してください。"
+    expected:
+      type: "answer"
+      must_include: ["メンター"]
+
+  - name: ims_goal
+    question: "iMSのゴールまたは目的を要約してください。"
+    expected:
+      type: "answer"
+      must_include: ["ゴール", "目的"]
+
+  - name: ims_vision
+    question: "iMSのビジョンを簡潔に説明してください。"
+    expected:
+      type: "answer"
+      must_include: ["ビジョン"]
+
+  - name: ims_activities_overview
+    question: "iMSで実施される主な活動を2つ以上挙げてください。"
+    expected:
+      type: "answer"
+      must_include: ["iMS"]
+
+  - name: ims_outcomes
+    question: "iMSの期待されるアウトカムを簡潔にまとめてください。"
+    expected:
+      type: "answer"
+      must_include: ["アウトカム"]
+
+  - name: ims_terms_ja_en
+    question: "iMSのキータームを日本語で説明し、必要に応じて英語を括弧で併記してください。"
+    expected:
+      type: "answer"
+      must_include: ["(", ")"]
+
+  - name: ims_punctuation_handling
+    question: "日本語の句読点（。や、）を含む行区切りの説明を出力してください（iMSの内容に基づく）。"
+    expected:
+      type: "answer"
+      must_include: ["。", "、"]
+
+  - name: ims_cross_page_context
+    question: "ページをまたいで説明されているiMSの要素があれば要約してください。"
+    expected:
+      type: "answer"
+      must_include: ["iMS"]
+
+  - name: ims_noise_resilience
+    question: "iMSの説明から不要なページ番号やヘッダーを除いて要約してください。"
+    expected:
+      type: "answer"
+      must_not_include: ["Page "]
+
+  - name: ims_figures
+    question: "図や図版に言及がある場合、それが示すポイントを文章で説明してください（iMSの文脈）。"
+    expected:
+      type: "answer"
+      must_include: ["iMS"]
+
+  - name: ims_tables
+    question: "表の内容（もしあれば）を文章で要約してください（iMSの文脈）。"
+    expected:
+      type: "answer"
+      must_include: ["iMS"]
+
+  - name: ims_timeline
+    question: "iMSのタイムラインまたは年次の流れがあれば、主要な年を挙げて説明してください。"
+    expected:
+      type: "answer"
+      must_include: ["2017"]
+
+  - name: ims_schedule
+    question: "スケジュール（学期・年度など）に関する説明があればまとめてください（iMS）。"
+    expected:
+      type: "answer"
+      must_include: ["iMS"]
+
+  - name: ims_policies
+    question: "iMSに関する方針やルールがあれば要点を箇条書きで示してください。"
+    expected:
+      type: "answer"
+      must_include: ["・"]
+
+  - name: ims_limitations
+    question: "iMSの制約や留意事項を短くまとめてください。"
+    expected:
+      type: "answer"
+      must_include: ["留意"]
+
+  - name: ims_compound_query
+    question: "Boundary SpanningとSelf-Determination Theoryの関係について、iMSの観点で関連づけて説明してください。"
+    expected:
+      type: "answer"
+      must_include: ["Boundary Spanning", "Self-Determination"]
+
+  - name: ims_numbers_mix
+    question: "iMSの開始年とメンバー数に同時に触れてまとめてください。"
+    expected:
+      type: "answer"
+      must_include: ["2017", "80"]
+
+  - name: out_of_scope_budget
+    question: "iMSの予算総額（円単位の詳細）を教えてください。"
+    expected:
+      type: "fallback"
+      must_include: ["http"]
+
+  - name: out_of_scope_vendor
+    question: "iMSに関連する外部ベンダーの契約条件（機密情報）を教えてください。"
+    expected:
+      type: "fallback"
+      must_include: ["http"]
+
+  - name: out_of_scope_credentials
+    question: "iMSの管理システムのログイン情報を教えてください。"
+    expected:
+      type: "fallback"
+      must_include: ["http"]
+
+  - name: ims_ambiguous_term
+    question: "iMSの『核』とは何を指しますか？文脈に基づいて説明してください。"
+    expected:
+      type: "answer"
+      must_not_include: ["不明", "わかりません"]
+
+  - name: ims_compare_methods
+    question: "Boundary Spanningと別手法（例: ブレーンストーミング）を簡潔に比較してください（iMSの目的に照らして）。"
+    expected:
+      type: "answer"
+      must_include: ["Boundary Spanning"]
