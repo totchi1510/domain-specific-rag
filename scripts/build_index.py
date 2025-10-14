@@ -7,11 +7,11 @@ import yaml
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
-from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader, PyPDFLoader
+from langchain_pymupdf4llm import PyMuPDF4LLMLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-
 
 def load_settings(settings_path: Path) -> dict:
     if settings_path.exists():
@@ -20,7 +20,29 @@ def load_settings(settings_path: Path) -> dict:
     return {}
 
 
-def collect_documents(input_path: Path) -> List:
+def pdfloader(r_tool: str, input_path: Path):
+    """PDF ローダーを返す。選択肢は以下の通り。
+    - pymupdf: PyMuPDF (fitz) ベースのローダー
+    - pymupdf4llm: PyMuPDF4LLM ベースのローダー
+    - pypdf: PyPDF2 ベースのローダー
+    - pdfplumber: pdfplumber ベースのローダー
+    - auto: pymupdf -> pypdf -> pdfplumber の順で試
+    失敗した場合は例外を投げる。
+    """
+    try:
+        if r_tool == "pymupdf":
+            return PyMuPDFLoader(str(input_path))
+        elif r_tool == "pymupdf4llm":
+            return PyMuPDF4LLMLoader(str(input_path))
+        elif r_tool == "pypdf":
+            return PyPDFLoader(str(input_path))
+
+    except Exception as e:
+        raise ValueError(f"Unknown reading_tool: {r_tool}")
+
+
+
+def collect_documents(r_tool: str, input_path: Path) -> List:
     """
     Collect Markdown,txt or pdf documents from a file or directory.
     - If file: supports .md/.markdown/.txt or .pdf
@@ -43,8 +65,9 @@ def collect_documents(input_path: Path) -> List:
             if p.suffix.lower() in {".md", ".markdown", ".txt"}:
                 loader = TextLoader(str(p), encoding="utf-8")
                 docs.extend(loader.load())
+
             elif p.suffix.lower() in {".pdf"}:
-                loader = PyMuPDFLoader(str(p))
+                loader = pdfloader(r_tool, p)
                 docs.extend(loader.load())
             else:
                 print(f"Warning: unsupported file type {p}, skipping")
@@ -62,6 +85,20 @@ def main():
     parser.add_argument("--chunk_overlap", type=int, default=200, help="Chunk overlap in characters")
     parser.add_argument("--model", default="text-embedding-3-small", help="OpenAI embeddings model")
     parser.add_argument("--peek", type=int, default=0, help="Print first N chunks for inspection")
+    parser.add_argument(
+        "--reading_tool",
+        default="pymupdf",
+        choices=[
+            "pymupdf",
+            "pymupdf4llm",
+            "pypdf",
+            "pdfplumber",
+            "pdfium",
+            "docling",
+            "auto",
+        ],
+        help="PDF reader to use (pymupdf/pymupdf4llm/pypdf/pdfplumber/pdfium/docling/auto)",
+    )
     args = parser.parse_args()
 
     # Load environment from .env and .env.local (latter overrides)
@@ -80,13 +117,15 @@ def main():
 
     _ = load_settings(Path("config/settings.yml"))
 
+    r_tool = args.reading_tool
+
     # Collect
-    documents = collect_documents(input_path)
+    documents = collect_documents(r_tool, input_path)
     if not documents:
         print(f"No source files found under {input_path}. Place .md/.txt/.pdf and rerun.")
         return
 
-    # Split
+    # split
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
