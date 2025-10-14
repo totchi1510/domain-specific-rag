@@ -7,6 +7,7 @@ import yaml
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import PyMupdfLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -21,9 +22,9 @@ def load_settings(settings_path: Path) -> dict:
 
 def collect_documents(input_path: Path) -> List:
     """
-    Collect Markdown/TXT documents from a file or directory.
-    - If file: supports .md/.markdown/.txt
-    - If directory: scans for .md/.markdown/.txt recursively
+    Collect Markdown,txt or pdf documents from a file or directory.
+    - If file: supports .md/.markdown/.txt or .pdf
+    - If directory: scans for .md/.markdown/.txt or .pdf recursively
     """
     docs = []
     targets: List[Path] = []
@@ -34,6 +35,7 @@ def collect_documents(input_path: Path) -> List:
             sorted(input_path.glob("**/*.md"))
             + sorted(input_path.glob("**/*.markdown"))
             + sorted(input_path.glob("**/*.txt"))
+            + sorted(input_path.glob("**/*.pdf"))
         )
 
     for p in targets:
@@ -41,6 +43,12 @@ def collect_documents(input_path: Path) -> List:
             if p.suffix.lower() in {".md", ".markdown", ".txt"}:
                 loader = TextLoader(str(p), encoding="utf-8")
                 docs.extend(loader.load())
+            elif p.suffix.lower() in {".pdf"}:
+                loader = PyMupdfLoader(str(p))
+                docs.extend(loader.load())
+            else:
+                print(f"Warning: unsupported file type {p}, skipping")
+
         except Exception as e:
             print(f"Warning: failed to load {p}: {e}")
     return docs
@@ -48,7 +56,7 @@ def collect_documents(input_path: Path) -> List:
 
 def main():
     parser = argparse.ArgumentParser(description="Build FAISS index from Markdown/TXT sources under llm/")
-    parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt")
+    parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt/.pdf")
     parser.add_argument("--out", default="artifacts", help="Output directory for FAISS index")
     parser.add_argument("--chunk_size", type=int, default=800, help="Chunk size in characters")
     parser.add_argument("--chunk_overlap", type=int, default=200, help="Chunk overlap in characters")
@@ -111,4 +119,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -58,7 +58,10 @@ def _startup():
     chat_model = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
     if os.getenv("OPENAI_API_KEY"):
         _chat = ChatOpenAI(model=chat_model, temperature=0.2)
-        _embeddings = OpenAIEmbeddings(model=os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"))
+        _embeddings = OpenAIEmbeddings(model=os.getenv(
+            "OPENAI_EMBED_MODEL",
+            "text-embedding-3-small"
+            ))
     else:
         _chat = None
         _embeddings = None
@@ -66,7 +69,11 @@ def _startup():
     # Load FAISS index if present and embeddings available
     artifacts_dir = Path("artifacts")
     if (artifacts_dir / "index.faiss").exists() and _embeddings is not None:
-        _vectordb = FAISS.load_local(str(artifacts_dir), _embeddings, allow_dangerous_deserialization=True)
+        _vectordb = FAISS.load_local(
+            str(artifacts_dir),
+            _embeddings,
+            allow_dangerous_deserialization=True
+            )
     else:
         _vectordb = None
 
@@ -118,8 +125,6 @@ def ask(req: Request, payload: AskRequest) -> AskResponse:
 
     # Optional query translation (JA -> EN) before retrieval
     translate_query = bool(_settings.get("translate_query", False))
-    doc_lang = str(_settings.get("doc_lang", "en")).lower()
-    answer_lang = str(_settings.get("answer_lang", "ja")).lower()
 
     q_for_search = q
     if translate_query:
