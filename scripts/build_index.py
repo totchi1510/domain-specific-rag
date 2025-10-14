@@ -1,5 +1,6 @@
 import argparse
 import os
+import time
 from pathlib import Path
 from typing import List
 
@@ -78,6 +79,7 @@ def collect_documents(r_tool: str, input_path: Path) -> List:
 
 
 def main():
+    t0 = time.perf_counter()
     parser = argparse.ArgumentParser(description="Build FAISS index from Markdown, txt or pdf sources under llm/")
     parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt/.pdf")
     parser.add_argument("--out", default="artifacts", help="Output directory for FAISS index")
@@ -160,6 +162,7 @@ def main():
     # Save
     vectordb.save_local(str(out_dir))
     print(f"Saved FAISS index to {out_dir}")
+    print(f"total_index_time_sec={time.perf_counter()-t0:.2f}")
 
 
 if __name__ == "__main__":
