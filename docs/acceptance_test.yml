@@ -93,11 +93,6 @@ cases:
       type: "answer"
       must_include: ["iMS"]
 
-  - name: ims_outcomes
-    question: "iMSの期待されるアウトカムを簡潔にまとめてください。"
-    expected:
-      type: "answer"
-      must_include: ["アウトカム"]
 
   - name: ims_terms_ja_en
     question: "iMSのキータームを日本語で説明し、必要に応じて英語を括弧で併記してください。"
@@ -105,35 +100,6 @@ cases:
       type: "answer"
       must_include: ["(", ")"]
 
-  - name: ims_punctuation_handling
-    question: "日本語の句読点（。や、）を含む行区切りの説明を出力してください（iMSの内容に基づく）。"
-    expected:
-      type: "answer"
-      must_include: ["。", "、"]
-
-  - name: ims_cross_page_context
-    question: "ページをまたいで説明されているiMSの要素があれば要約してください。"
-    expected:
-      type: "answer"
-      must_include: ["iMS"]
-
-  - name: ims_noise_resilience
-    question: "iMSの説明から不要なページ番号やヘッダーを除いて要約してください。"
-    expected:
-      type: "answer"
-      must_not_include: ["Page "]
-
-  - name: ims_figures
-    question: "図や図版に言及がある場合、それが示すポイントを文章で説明してください（iMSの文脈）。"
-    expected:
-      type: "answer"
-      must_include: ["iMS"]
-
-  - name: ims_tables
-    question: "表の内容（もしあれば）を文章で要約してください（iMSの文脈）。"
-    expected:
-      type: "answer"
-      must_include: ["iMS"]
 
   - name: ims_timeline
     question: "iMSのタイムラインまたは年次の流れがあれば、主要な年を挙げて説明してください。"

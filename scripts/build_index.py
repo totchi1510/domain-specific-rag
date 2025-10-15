@@ -8,20 +8,13 @@ import yaml
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import TextLoader
-from langchain_community.document_loaders import PyMuPDFLoader, PyPDFLoader, PDFPlumberLoader
-try:
-    from langchain_community.document_loaders import PyPDFium2Loader  # type: ignore
-except Exception:
-    PyPDFium2Loader = None  # type: ignore
-try:
-    from langchain_pymupdf4llm import PyMuPDF4LLMLoader  # type: ignore
-except Exception:
-    PyMuPDF4LLMLoader = None  # type: ignore
-
+from langchain_community.document_loaders import PyMuPDFLoader, PyPDFLoader, PyPDFium2Loader, PDFPlumberLoader, PDFMinerLoader
+from langchain_pymupdf4llm import PyMuPDF4LLMLoader
+# from langchain_unstructured import UnstructuredLoader　 errorになるのでコメントアウト
+#from langchain_docling import DoclingLoader   docling はやってもいいが、インストールが重いので保留
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-
 
 def load_settings(settings_path: Path) -> dict:
     if settings_path.exists():
@@ -31,45 +24,40 @@ def load_settings(settings_path: Path) -> dict:
 
 
 def pdfloader(r_tool: str, input_path: Path):
-    """Return a PDF loader instance based on r_tool.
-    Supported: pymupdf, pymupdf4llm, pypdf, pdfplumber, pdfium2, docling, auto
+    """PDF ローダーを返す。選択肢は以下の通り。
+    - pymupdf: PyMuPDF (fitz) ベースのローダー
+    - pymupdf4llm: PyMuPDF4LLM ベースのローダー
+    - pypdf: PyPDF2 ベースのローダー
+    - pdfplumber: pdfplumber ベースのローダー
+    - auto: pymupdf -> pypdf -> pdfplumber の順で試
+    失敗した場合は例外を投げる。
     """
-    if r_tool == "pymupdf":
-        return PyMuPDFLoader(str(input_path))
-    if r_tool == "pymupdf4llm":
-        if PyMuPDF4LLMLoader is None:
-            raise RuntimeError("pymupdf4llm not installed. Add pymupdf4llm to requirements.txt")
-        return PyMuPDF4LLMLoader(str(input_path))
-    if r_tool == "pypdf":
-        return PyPDFLoader(str(input_path))
-    if r_tool == "pdfplumber":
-        return PDFPlumberLoader(str(input_path))
-    if r_tool == "pdfium2":
-        if PyPDFium2Loader is None:
-            raise RuntimeError("PyPDFium2Loader unavailable. Install pypdfium2")
-        return PyPDFium2Loader(str(input_path))
-    if r_tool == "docling":
-        try:
-            from langchain_docling import DoclingLoader  # type: ignore
-        except Exception:
-            try:
-                from langchain_community.document_loaders import DoclingLoader  # type: ignore
-            except Exception as e:
-                raise RuntimeError("DoclingLoader unavailable. Install langchain-docling") from e
-        return DoclingLoader(str(input_path))
-    if r_tool == "auto":
-        for candidate in ("pymupdf", "pypdf", "pdfplumber", "pdfium2", "docling"):
-            try:
-                return pdfloader(candidate, input_path)
-            except Exception:
-                continue
-        raise RuntimeError("No available PDF loader. Install one of: pymupdf/pypdf/pdfplumber/pypdfium2/langchain-docling.")
-    raise ValueError(f"Unknown reading_tool: {r_tool}")
+    try:
+        if r_tool == "pymupdf":
+            return PyMuPDFLoader(str(input_path))
+        elif r_tool == "pymupdf4llm":
+            return PyMuPDF4LLMLoader(str(input_path))
+        elif r_tool == "pypdf":
+            return PyPDFLoader(str(input_path))
+        elif r_tool == "pdfium2":
+            return PyPDFium2Loader(str(input_path))
+        elif r_tool == "pdfplumber":
+            return PDFPlumberLoader(str(input_path))
+        elif r_tool == "pdfminer":
+            return PDFMinerLoader(str(input_path))
+        #elif r_tool == "unstructured":
+            #return UnstructuredLoader(str(input_path))
+        #elif r_tool == "docling":
+            #return DoclingLoader(str(input_path))
+
+    except Exception as e:
+        raise ValueError(f"Unknown reading_tool: {r_tool}")
+
 
 
 def collect_documents(r_tool: str, input_path: Path) -> List:
     """
-    Collect Markdown, txt or pdf documents from a file or directory.
+    Collect Markdown,txt or pdf documents from a file or directory.
     - If file: supports .md/.markdown/.txt or .pdf
     - If directory: scans for .md/.markdown/.txt or .pdf recursively
     """
@@ -90,18 +78,20 @@ def collect_documents(r_tool: str, input_path: Path) -> List:
             if p.suffix.lower() in {".md", ".markdown", ".txt"}:
                 loader = TextLoader(str(p), encoding="utf-8")
                 docs.extend(loader.load())
+
             elif p.suffix.lower() in {".pdf"}:
                 loader = pdfloader(r_tool, p)
                 docs.extend(loader.load())
             else:
                 print(f"Warning: unsupported file type {p}, skipping")
+
         except Exception as e:
             print(f"Warning: failed to load {p}: {e}")
     return docs
 
 
 def main():
-    t0 = time.perf_counter()
+
     parser = argparse.ArgumentParser(description="Build FAISS index from Markdown, txt or pdf sources under llm/")
     parser.add_argument("--input", default="llm", help="Path to a file or directory containing .md/.txt/.pdf")
     parser.add_argument("--out", default="artifacts", help="Output directory for FAISS index")
@@ -118,10 +108,9 @@ def main():
             "pypdf",
             "pdfplumber",
             "pdfium2",
-            "docling",
-            "auto",
+            "pdfminer",
         ],
-        help="PDF reader to use (pymupdf/pymupdf4llm/pypdf/pdfplumber/pdfium2/docling/auto)",
+        help="PDF reader to use (pymupdf/pymupdf4llm/pypdf/pdfplumber/pdfium2/pdfminer)",
     )
     args = parser.parse_args()
 
@@ -136,19 +125,25 @@ def main():
         return
 
     out_dir = Path(args.out)
+
     out_dir.mkdir(parents=True, exist_ok=True)
 
     _ = load_settings(Path("config/settings.yml"))
 
     r_tool = args.reading_tool
 
+    t0 = time.perf_counter()
+
     # Collect
     documents = collect_documents(r_tool, input_path)
+
+    dt = time.perf_counter()-t0
+
     if not documents:
         print(f"No source files found under {input_path}. Place .md/.txt/.pdf and rerun.")
         return
 
-    # Split
+    # split
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
@@ -183,7 +178,7 @@ def main():
     # Save
     vectordb.save_local(str(out_dir))
     print(f"Saved FAISS index to {out_dir}")
-    print(f"total_index_time_sec={time.perf_counter()-t0:.2f}")
+    print(f"load_file_time_sec={dt:.2f} ")
 
 
 if __name__ == "__main__":
