@@ -32,7 +32,7 @@
   - `--reading_tool pdfminer`
 
 観察ポイント（ログに表示されます）
-- `Loaded X pages -> Y chunks`（ページ数とチャンク数）
+- `--peek`を設定した場合の出力結果
 - `load_file_time_sec=...`（読み込み〜分割までの時間の目安）
 
 同じ `llm/` 入力でローダーを変え、上記2点を記録・比較してください。
