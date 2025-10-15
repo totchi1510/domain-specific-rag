@@ -1,66 +1,81 @@
-﻿# Domain RAG MVP — User Guide
+# ワークショップ用 README（PDFローダー×RAG 比較）
 
-このREADMEは「同じようにこのサイトを使える」ための手順に特化しています。設計・仕様の詳細は `docs/specification.md` を参照してください。
+このドキュメントは勉強会（ワークショップ）向けです。PDF解析ツール（ローダー）の違いが「インデックス作成の速さ」と「RAG の挙動（精度・fallback）」に与える影響を体感します。
 
-目的
-- 日本語のpdfをナレッジにし、日本語の質問に自動回答します（JP→JA回答）。
+## ゴール
+- 同じ教材に対して複数ローダーでインデックスを作成し、処理時間・チャンク数を比較する
+- 同じ質問を API に投げ、fallback の有無や回答内容の違いを観察する
 
-前提
-- Docker/Docker Compose が利用できる
-- OpenAI APIキーがある（`.env.local` に設定）
+## 前提
+- Docker / Docker Compose が使えること
+- OpenAI API キー（埋め込み生成に使用）
 
-セットアップ（最短5分）
-1) ナレッジを置く
-- `llm/` 配下に `.pdf`もしくは`.txt`、`.md`を置く
-
-2) APIキーを設定
-- `.env.local` を作成し、以下を記載
-```
-OPENAI_API_KEY=sk-...
-```
-
-3) 設定を確認（任意）
-- `config/settings.yml`（既定値のままでも動作）
-```
-threshold: 0.50
-top_k: 5
-google_form_url: "https://example.com/form"
-translate_query: true
-doc_lang: "en"
-answer_lang: "ja"
-```
-
-4) コンテナをビルド
+## セットアップ（最短）
+1) 依存のビルド
 - `docker compose build`
 
-5) 索引を作成（初回/更新時）
-- `docker compose run --rm indexer`
-- チャンク確認（任意）: `docker compose run --rm indexer python scripts/build_index.py --input /app/llm --out /app/artifacts --peek 8`
+2) API キー設定
+- `.env.example` をコピーして `.env.local` を作成し、`OPENAI_API_KEY=sk-...` を記入
 
-6) APIを起動
-- `docker compose up -d api`
-- ヘルス: `curl http://127.0.0.1:8000/healthz`（`{"ok": true}` ならOK）
+3) 教材を配置
+- `llm/` 配下に `.pdf` / `.md` / `.txt` を置く（既存の教材がある場合はそのまま）
 
-7) Webサイトを使う
-- ブラウザで `http://127.0.0.1:8000/`
-- 質問を入力して送信。該当が弱い場合は「お問い合わせ」ボタンが表示されます。
+## インデックス作成（ローダー別）
+以下のようにローダーを切り替えて実行します。所要時間とコンソールの統計を記録してください。
 
-更新フロー（ナレッジを修正/追加したら）
-1) `llm/` の `.md/.txt` を更新
-2) 索引作成を再実行: `docker compose run --rm indexer`
-3) API再起動: `docker compose restart api`
+- 例: PDFium2（推奨）
+  - `docker compose run --rm indexer --reading_tool pdfium2 --input /app/llm --out /app/artifacts --peek 3`
+- 他の例（順次比較）
+  - `--reading_tool pymupdf`
+  - `--reading_tool pypdf`
+  - `--reading_tool pdfplumber`
+  - `--reading_tool pdfminer`
 
-トラブルシュート
-- 常に `fallback: true`
-  - ナレッジ内に期待語彙が無い／分割が粗い／閾値が高い可能性
-  - 対策: `--peek` でチャンクを確認、`threshold` を 0.30〜0.50 で調整、`top_k` を 3→5へ
-- `/healthz` が `ok:false`
-  - APIキー未設定、または索引未作成
-  - 対策: `.env.local` を確認、手順5を実行
-- Composeの警告（version obsolete）
-  - 本リポは `version:` を削除済み。警告が出る場合はComposeのバージョンを確認
+観察ポイント（ログに表示されます）
+- `Loaded X pages -> Y chunks`（ページ数とチャンク数）
+- `load_file_time_sec=...`（読み込み〜分割までの時間の目安）
 
-参考（任意）
-- 受入テストをまとめて実行: 
-  - `docker compose exec api python scripts/run_acceptance_tests.py --file /app/docs/acceptance_test.yml --base-url http://127.0.0.1:8000`
-- 仕様・開発手順: `docs/specification.md`, `docs/dev_steps.md`
+同じ `llm/` 入力でローダーを変え、上記2点を記録・比較してください。
+
+## API 起動と疎通
+- 起動: `docker compose up -d api`
+- ヘルス: `curl http://127.0.0.1:8000/healthz` → `{ "ok": true }` で準備OK
+
+## ACCEPTANCE テスト（手動で実行）
+`docs/acceptance_test.yml` に、質問 (`question`) と期待 (`expected`) が定義されています。以下の手順で手動実行・確認します。
+
+1) 対象テストを開く
+- `docs/acceptance_test.yml` をエディタで開き、`name` と `question` を確認
+  - 例: `out_of_scope_credentials`（期待: `fallback: true`）
+  - 例: `ims_compare_methods`（期待: 回答に特定語が含まれる）
+
+2) API に質問を送る（例: curl）
+- `curl -s -X POST http://127.0.0.1:8000/ask -H "Content-Type: application/json" -d "{\"question\":\"<ここに question を貼る>\"}"`
+
+3) 応答を確認
+- 応答 JSON 例: `{ "answer": "...", "fallback": false }`
+- 期待の読み方（YAML の `expected` を参照）
+  - `type: fallback` の場合 → `fallback: true` であること
+  - `must_include: ["...", ...]` → `answer` にこれらの語が含まれること
+  - `must_not_include: ["...", ...]` → `answer` に含まれないこと
+
+4) ローダー切替で再確認
+- 別ローダーで再度インデックスを作成（上書き）し、`docker compose restart api`
+- 同じ質問を投げ、`fallback` の有無や回答の差を比較
+
+ヒント:
+- out-of-scope 系（資格情報・ベンダー個別情報など）は多くの教材で `fallback: true` が期待されます
+- 定義や用語説明（例: “Boundary Spanning” を含む質問）は、関連語が回答に含まれるかを確認します
+
+## よくある質問 / トラブルシュート
+- `healthz` が `ok:false` のまま
+  - インデックスが存在しない、または OpenAI キー未設定です
+  - 対処: インデックス作成をやり直し、`.env.local` のキーを確認
+- Windows でファイル共有に失敗
+  - Docker Desktop の共有設定で、このリポジトリのフォルダを許可してください
+- 速度だけ見たい（キーを共有できない場合）
+  - 講師側で実行して画面共有するか、事前に作成した `artifacts/` を配布して API の挙動だけを体験してください
+
+## 補足
+- 既存のプロダクト向け README は `README.product.md` に移動しました（API の詳細利用はこちらを参照）
+
