@@ -1,26 +1,26 @@
-# Domain RAG MVP ? User Guide
+# Domain RAG MVP — User Guide
 
-����README�́u�����悤�ɂ��̃T�C�g���g����v���߂̎菇�ɓ������Ă��܂��B�݌v�E�d�l�̏ڍׂ� `docs/specification.md` ���Q�Ƃ��Ă��������B
+このREADMEは「同じようにこのサイトを使える」ための手順に特化しています。設計・仕様の詳細は `docs/specification.md` を参照してください。
 
-�ړI
-- ���{���pdf���i���b�W�ɂ��A���{��̎���Ɏ����񓚂��܂��iJP��JA�񓚁j�B
+## 目的
+- 日本語のpdfをナレッジにし、日本語の質問に自動回答します（JP→JA回答）。
 
-�O��
-- Docker/Docker Compose �����p�ł���
-- OpenAI API�L�[������i`.env.local` �ɐݒ�j
+## 前提
+- Docker/Docker Compose が利用できる
+- OpenAI APIキーがある（`.env.local` に設定）
 
-�Z�b�g�A�b�v�i�ŒZ5���j
-1) �i���b�W��u��
-- `llm/` �z���� `.pdf`��������`.txt`�A`.md`��u��
+## セットアップ（最短5分）
+1) ナレッジを置く
+- `llm/` 配下に `.pdf`もしくは`.txt`、`.md`を置く
 
-2) API�L�[��ݒ�
-- `.env.local` ���쐬���A�ȉ����L��
+2) APIキーを設定
+- `.env.local` を作成し、以下を記載
 ```
 OPENAI_API_KEY=sk-...
 ```
 
-3) �ݒ���m�F�i�C�Ӂj
-- `config/settings.yml`�i����l�̂܂܂ł�����j
+3) 設定を確認（任意）
+- `config/settings.yml`（既定値のままでも動作）
 ```
 threshold: 0.50
 top_k: 5
@@ -30,38 +30,37 @@ doc_lang: "en"
 answer_lang: "ja"
 ```
 
-4) �R���e�i���r���h
+4) コンテナをビルド
 - `docker compose build`
 
-5) �������쐬�i����/�X�V���j
+5) 索引を作成（初回/更新時）
 - `docker compose run --rm indexer`
-- �`�����N�m�F�i�C�Ӂj: `docker compose run --rm indexer python scripts/build_index.py --input /app/llm --out /app/artifacts --peek 8`
+- チャンク確認（任意）: `docker compose run --rm indexer python scripts/build_index.py --input /app/llm --out /app/artifacts --peek 8`
 
-6) API���N��
+6) APIを起動
 - `docker compose up -d api`
-- �w���X: `curl http://127.0.0.1:8000/healthz`�i`{"ok": true}` �Ȃ�OK�j
+- ヘルス: `curl http://127.0.0.1:8000/healthz`（`{"ok": true}` ならOK）
 
-7) Web�T�C�g���g��
-- �u���E�U�� `http://127.0.0.1:8000/`
-- �������͂��đ��M�B�Y�����ア�ꍇ�́u���₢���킹�v�{�^�����\������܂��B
+7) Webサイトを使う
+- ブラウザで `http://127.0.0.1:8000/`
+- 質問を入力して送信。該当が弱い場合は「お問い合わせ」ボタンが表示されます。
 
-�X�V�t���[�i�i���b�W���C��/�ǉ�������j
-1) `llm/` �� `.md/.txt` ���X�V
-2) �����쐬���Ď��s: `docker compose run --rm indexer`
-3) API�ċN��: `docker compose restart api`
+## 更新フロー（ナレッジを修正/追加したら）
+1) `llm/` の `.md/.txt` を更新
+2) 索引作成を再実行: `docker compose run --rm indexer`
+3) API再起動: `docker compose restart api`
 
-�g���u���V���[�g
-- ��� `fallback: true`
-  - �i���b�W���Ɋ��Ҍ�b�������^�������e���^臒l�������\��
-  - �΍�: `--peek` �Ń`�����N���m�F�A`threshold` �� 0.30?0.50 �Œ����A`top_k` �� 3��5��
-- `/healthz` �� `ok:false`
-  - API�L�[���ݒ�A�܂��͍������쐬
-  - �΍�: `.env.local` ���m�F�A�菇5�����s
-- Compose�̌x���iversion obsolete�j
-  - �{���|�� `version:` ���폜�ς݁B�x�����o��ꍇ��Compose�̃o�[�W�������m�F
+## トラブルシュート
+- 常に `fallback: true`
+  - ナレッジ内に期待語彙が無い／分割が粗い／閾値が高い可能性
+  - 対策: `--peek` でチャンクを確認、`threshold` を 0.30〜0.50 で調整、`top_k` を 3→5へ
+- `/healthz` が `ok:false`
+  - APIキー未設定、または索引未作成
+  - 対策: `.env.local` を確認、手順5を実行
+- Composeの警告（version obsolete）
+  - 本リポは `version:` を削除済み。警告が出る場合はComposeのバージョンを確認
 
-�Q�l�i�C�Ӂj
-- ����e�X�g���܂Ƃ߂Ď��s: 
+## 参考（任意）
+- 受入テストをまとめて実行:
   - `docker compose exec api python scripts/run_acceptance_tests.py --file /app/docs/acceptance_test.yml --base-url http://127.0.0.1:8000`
-- �d�l�E�J���菇: `docs/specification.md`, `docs/dev_steps.md`
-
+- 仕様・開発手順: `docs/specification.md`, `docs/dev_steps.md`
